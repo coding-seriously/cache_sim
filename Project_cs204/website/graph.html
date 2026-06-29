@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cache Graph</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body class="graph-body">
+    <header class="topbar">
+        <div class="topbar-logo">cache<span>.sim</span></div>
+        <div class="topbar-sep">/</div>
+        <div class="topbar-title">Hit / Miss Graph</div>
+    </header>
+
+    <main class="graph-page">
+        <div class="graph-shell">
+            <div class="graph-shell-header">
+                <div class="graph-shell-title">
+                    <h1>Hit and miss trends</h1>
+                    <p>Loaded from the latest simulation run. X axis is the instruction number.</p>
+                </div>
+                <div class="graph-shell-actions">
+                    <select id="graphMode" class="graph-select" aria-label="Graph mode">
+                        <option value="counts">Hits and misses by instruction</option>
+                        <option value="hits">Hit count by instruction</option>
+                        <option value="misses">Miss count by instruction</option>
+                        <option value="percentages">Hit and miss percentage by instruction</option>
+                    </select>
+                    <a class="btn" href="index.html">Back to Visualizer</a>
+                </div>
+            </div>
+
+            <div class="graph-shell-body">
+                <section class="graph-panel">
+                    <h2>Graph</h2>
+                    <canvas id="graphCanvas" class="graph-canvas" width="1280" height="640"
+                        aria-label="Hit and miss graph"></canvas>
+                    <div class="graph-shell-controls">
+                        <div class="graph-control-group">
+                            <button id="zoomOutBtn" class="btn" type="button">Zoom Out</button>
+                            <button id="zoomInBtn" class="btn" type="button">Zoom In</button>
+                            <button id="resetViewBtn" class="btn" type="button">Reset View</button>
+                        </div>
+                        <label class="graph-slider-wrap">
+                            Traverse
+                            <input id="graphPan" class="graph-pan-range" type="range" min="0" max="0" step="1"
+                                value="0" />
+                        </label>
+                        <div id="graphZoomLabel" class="graph-zoom-label">Zoom: 100%</div>
+                    </div>
+                    <div class="graph-legend">
+                        <span><i class="graph-dot graph-dot-hit"></i>Hit</span>
+                        <span><i class="graph-dot graph-dot-miss"></i>Miss</span>
+                    </div>
+                    <div class="graph-note">Percent view is normalized per instruction. Count views show cumulative
+                        totals.</div>
+                </section>
+
+                <aside class="graph-panel graph-stats">
+                    <h2>Run Summary</h2>
+                    <div class="graph-stat">
+                        <span class="label">Visible Instructions</span>
+                        <span id="graphInstructions" class="value">-</span>
+                    </div>
+                    <div class="graph-stat">
+                        <span class="label">Visible Hits</span>
+                        <span id="graphHits" class="value">-</span>
+                    </div>
+                    <div class="graph-stat">
+                        <span class="label">Visible Misses</span>
+                        <span id="graphMisses" class="value">-</span>
+                    </div>
+                    <div class="graph-stat">
+                        <span class="label">Total Trace Size</span>
+                        <span id="graphTotal" class="value">-</span>
+                    </div>
+                    <div class="graph-stat">
+                        <span class="label">Updated</span>
+                        <span id="graphUpdated" class="value">No data loaded</span>
+                    </div>
+                    <div id="graphEmpty" class="graph-empty" hidden>
+                        Run the simulation on the main page first. The graph page reads the latest saved trace data
+                        from your browser storage.
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </main>
+
+    <script src="graph.js"></script>
+</body>
+
+</html>
