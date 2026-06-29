@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cache Visualizer with PinTool</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+    <header class="topbar">
+        <div class="topbar-logo">cache<span>.sim</span></div>
+        <div class="topbar-sep">/</div>
+        <div class="topbar-title">PinTool Cache Visualizer</div>
+    </header>
+
+    <main class="layout" id="layout">
+        <section class="left-panel" id="leftPanel">
+            <div class="panel-header">Cache Configuration</div>
+
+            <div class="config-section">
+                <div class="config-row">
+                    <div class="config-field">
+                        <label>Cache Size (KB)</label>
+                        <input id="cacheSizeKB" type="number" min="1" value="64" />
+                    </div>
+                    <div class="config-field">
+                        <label>Block Size (B)</label>
+                        <input id="blockSize" type="number" min="1" value="4" />
+                    </div>
+                </div>
+
+                <div class="config-row">
+                    <div class="config-field">
+                        <label>Associativity</label>
+                        <input id="associativity" type="number" min="1" value="2" />
+                    </div>
+                    <div class="config-field">
+                        <label>Policy</label>
+                        <select id="policy">
+                            <option value="0">LRU (0)</option>
+                            <option value="1">FIFO (1)</option>
+                            <option value="2">RANDOM (2)</option>
+                        </select>
+                    </div>
+                    <div class="config-field">
+                        <label>Return Policy</label>
+                        <select id="returnPolicy">
+                            <option value="0">WRITE_BACK (0)</option>
+                            <option value="1">WRITE_THROUGH (1)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="config-row single">
+                    <div class="config-field">
+                        <label>Pin Binary Path</label>
+                        <input id="pinPath" type="text"
+                            value="/home/sqln/Documents/labtest4_2024csb1151_2024csb1153/pin_tool/pin"
+                            placeholder="/home/sqln/Documents/labtest4_2024csb1151_2024csb1153/pin_tool/pin" />
+                    </div>
+                </div>
+
+                <div class="config-row single">
+                    <div class="config-field">
+                        <label>Pintool .so Path</label>
+                        <input id="pinToolPath" type="text"
+                            value="/home/sqln/Documents/labtest4_2024csb1151_2024csb1153/pin_tool/source/tools/ManualExamples/obj-intel64/memtrace2.so"
+                            placeholder="/home/sqln/Documents/labtest4_2024csb1151_2024csb1153/pin_tool/source/tools/ManualExamples/obj-intel64/memtrace2.so" />
+                    </div>
+                </div>
+
+                <div class="config-row single">
+                    <div class="config-field">
+                        <label>Program Args (optional)</label>
+                        <input id="programArgs" type="text" placeholder="arg1 arg2" />
+                    </div>
+                </div>
+
+                <div class="button-row">
+                    <button id="runBtn" class="btn btn-primary">Run Pin + Cache Sim</button>
+                    <button id="openGraphBtn" class="btn">Graph Plot</button>
+                </div>
+            </div>
+
+            <div class="trace-section">
+                <div class="panel-header">C++ Program Source</div>
+                <textarea id="cppCode" spellcheck="false">#include <iostream>
+#include <vector>
+
+int main() {
+    std::vector<int> a(16, 1);
+    long long sum = 0;
+    for (int i = 0; i < 16; i++) {
+        a[i] = i * 3;
+        sum += a[i];
+    }
+    std::cout << sum << "\n";
+    return 0;
+}
+                    </textarea>
+                <pre id="status" class="status-box">Waiting to run...</pre>
+            </div>
+        </section>
+
+        <div class="splitter splitter-left" id="leftSplitter" role="separator" aria-orientation="vertical"
+            aria-label="Resize left panel"></div>
+
+        <section class="center-panel" id="centerPanel">
+            <div class="panel-header panel-header-main">
+                Cache Animation
+                <span class="badge">Live</span>
+            </div>
+
+            <div class="legend-wrap">
+                <div class="legend">
+                    <span><i class="dot dot-entry"></i>Entry</span>
+                    <span><i class="dot dot-exit"></i>Exit</span>
+                    <span><i class="dot dot-writeback"></i>Write-back</span>
+                </div>
+            </div>
+
+            <div class="player-controls">
+                <button id="stepBtn" class="btn">Step</button>
+                <button id="playBtn" class="btn">Play</button>
+                <button id="pauseBtn" class="btn">Pause</button>
+                <label class="speed-wrap">
+                    Speed
+                    <input id="speed" type="range" min="40" max="1200" step="20" value="120" />
+                </label>
+            </div>
+
+            <div class="cache-wrap">
+                <div id="grid" class="cache-grid"></div>
+            </div>
+        </section>
+
+        <div class="splitter splitter-right" id="rightSplitter" role="separator" aria-orientation="vertical"
+            aria-label="Resize right panel"></div>
+
+        <section class="right-panel" id="rightPanel">
+            <div class="panel-header">
+                Event Summary
+                <span class="badge">Status</span>
+            </div>
+            <div class="access-summary">
+                <div id="traceMeta" class="trace-meta">No trace loaded.</div>
+                <div id="traceLine" class="trace-line">-</div>
+                <div id="accessTypeBox" class="access-type-box access-type-idle">Waiting for instruction...</div>
+                <div class="counter-row" aria-live="polite">
+                    <div id="hitChip" class="counter-chip counter-hit">Hits: <span id="hitCount">0</span></div>
+                    <div id="missChip" class="counter-chip counter-miss">Misses: <span id="missCount">0</span></div>
+                </div>
+            </div>
+            <div class="summary-box">
+                <p>This panel mirrors the cache visualizer style. Existing animation and simulation controls are
+                    unchanged.</p>
+                <ul>
+                    <li>Use Run to rebuild trace and simulation.</li>
+                    <li>Use Step/Play/Pause to navigate instructions.</li>
+                    <li>Watch 4-color access state updates in real time.</li>
+                </ul>
+            </div>
+            <div class="summary-box muted">
+                <p>The hit/miss graph is now on a separate page, and the main panes can be resized with the mouse.</p>
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

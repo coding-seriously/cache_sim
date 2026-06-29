@@ -13,18 +13,23 @@ enum Policy
     RANDOM
 };
 
-struct CacheLine
-{
-    address_t tag;
+struct CacheLine {
     bool valid;
-    int last_access_time;
-    int load_time;
     bool dirty;
+    address_t tag;
+    int last_access_time; 
+    int load_time;         
 };
 
 struct CacheSet
 {
     vector<CacheLine> lines;
+};
+
+enum ReturnPolicy
+{
+    WRITE_BACK,   
+    WRITE_THROUGH 
 };
 
 struct Cache
@@ -42,10 +47,13 @@ struct Cache
     int current_time;
     int write_backs;
     Policy policy;
+    ReturnPolicy return_policy;
+    int mem_writes;   
 };
 
 // functions
-void init_cache(Cache &cache, int cache_size, int block_size, int assoc, Policy policy);
+void init_cache(Cache &cache, int cache_size, int block_size, int assoc, Policy policy, ReturnPolicy return_policy);
+
 void access_cache(Cache &cache, address_t address, char operation);
 void print_stats(const Cache &cache);
 

@@ -36,13 +36,18 @@ int main()
 
     cout << "Enter policy (0 = lru, 1 = fifo, 2 = random): ";
     cin >> policy_choice;
+    int return_policy_choice;
+    cout << "Enter return policy (0 = write-back, 1 = write-through): ";
+    cin >> return_policy_choice;
+
+    cache.return_policy = (return_policy_choice == 0) ? WRITE_BACK : WRITE_THROUGH;
 
     cout << "Enter trace file path: ";
     cin >> trace_path;
 
     policy = parse_policy(policy_choice);
 
-    init_cache(cache, cache_size, block_size, assoc, policy);
+        init_cache(cache, cache_size, block_size, assoc, policy, cache.return_policy);
 
     ifstream file(trace_path);
     if (!file)
