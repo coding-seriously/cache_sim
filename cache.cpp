@@ -6,7 +6,14 @@
 
 using namespace std;
 
-void init_cache(Cache &cache, int cache_size, int block_size, int assoc, Policy policy)
+
+auto int_log2 = [](int val) {
+    int bits = 0;
+    while (val > 1) { val >>= 1; bits++; }
+    return bits;
+};
+
+void init_cache(Cache &cache, int cache_size, int block_size, int assoc, Policy policy, ReturnPolicy return_policy)
 {
     cache.assoc = assoc;
     cache.block_size = block_size;
@@ -21,6 +28,8 @@ void init_cache(Cache &cache, int cache_size, int block_size, int assoc, Policy 
     cache.write_misses = 0;
     cache.current_time = 0;
     cache.write_backs = 0;
+    cache.return_policy = return_policy; // 
+    cache.mem_writes = 0;
 
     cache.sets.resize(cache.num_sets);
 
@@ -31,25 +40,24 @@ void init_cache(Cache &cache, int cache_size, int block_size, int assoc, Policy 
         {
             cache.sets[set_idx].lines[line_idx].valid = false;
             cache.sets[set_idx].lines[line_idx].dirty = false;
+            cache.sets[set_idx].lines[line_idx].last_access_time = 0;
+            cache.sets[set_idx].lines[line_idx].load_time = 0;
         }
     }
 }
 
 void access_cache(Cache &cache, address_t address, char operation)
 {
-    // FORCE ADDRESS INTO 256KB RANGE
-    // 256 KB = 256 * 1024 = 262144 bytes
-    address = address & 262143;
+    address = address & 262143; // bitmasking 256kb
 
-    int offset_bits = log2(cache.block_size);
-    int index_bits = log2(cache.num_sets);
-
+    int offset_bits = int_log2(cache.block_size);
+    int index_bits = int_log2(cache.num_sets);
     int set_idx = (address >> offset_bits) & (cache.num_sets - 1);
     address_t tag = address >> (offset_bits + index_bits);
 
     CacheSet &set = cache.sets[set_idx];
 
-    // HIT
+    // ── HIT CHECK ──────────────────────────────────────────────
     for (int line_idx = 0; line_idx < cache.assoc; line_idx++)
     {
         if (set.lines[line_idx].valid && set.lines[line_idx].tag == tag)
@@ -63,19 +71,26 @@ void access_cache(Cache &cache, address_t address, char operation)
             else if (operation == 'W')
             {
                 cache.write_hits++;
+
+                if (cache.return_policy == WRITE_BACK)
+                {
+                    // mark dirty, write to memory only on eviction
+                    set.lines[line_idx].dirty = true;
+                }
+                else
+                {
+                    // WRITE_THROUGH: write immediately to memory, block stays clean
+                    cache.mem_writes++;
+                    set.lines[line_idx].dirty = false; // never dirty in write-through
+                }
             }
 
-            if (operation == 'W')
-            {
-                set.lines[line_idx].dirty = true;
-            }
-
-            touch_line(cache, set.lines[line_idx]);
+            touch_line(cache, set.lines[line_idx]); // updates cache
             return;
         }
     }
 
-    // MISS
+    // ── MISS ───────────────────────────────────────────────────
     cache.misses++;
 
     if (operation == 'R')
@@ -85,23 +100,31 @@ void access_cache(Cache &cache, address_t address, char operation)
     else if (operation == 'W')
     {
         cache.write_misses++;
-    }
 
+        if (cache.return_policy == WRITE_THROUGH)
+        {
+           
+            cache.mem_writes++;
+            return; 
+        }
+        
+    }
     int line_idx = choose_line(cache, set);
 
-    // WRITE-BACK
     if (set.lines[line_idx].valid && set.lines[line_idx].dirty)
     {
+        
         cache.write_backs++;
-        cout << "Write-back occurred\n";
+        cache.mem_writes++;
+        cout << "Write-back occurred " << "(evicting tag=" << set.lines[line_idx].tag << " from set=" << set_idx << ")\n";
     }
 
-    // INSERT
     set.lines[line_idx].tag = tag;
     set.lines[line_idx].valid = true;
-    set.lines[line_idx].dirty = (operation == 'W');
 
-    load_line(cache, set.lines[line_idx]);
+    set.lines[line_idx].dirty = (operation == 'W' && cache.return_policy == WRITE_BACK);
+
+    load_line(cache, set.lines[line_idx]); // update new data in cache line
 }
 
 void print_stats(const Cache &cache)
@@ -130,6 +153,7 @@ void print_stats(const Cache &cache)
     cout << "Write Hits     : " << cache.write_hits << endl;
     cout << "Write Misses   : " << cache.write_misses << endl;
     cout << "Write-backs    : " << cache.write_backs << endl;
+    cout << "Memory Writes  : " << cache.mem_writes << endl;
     cout << endl;
     cout << "Total  Hit/Miss % : " << total_hit_rate << "% / " << total_miss_rate << "%" << endl;
     cout << "Read   Hit/Miss % : " << read_hit_rate << "% / " << read_miss_rate << "%" << endl;
